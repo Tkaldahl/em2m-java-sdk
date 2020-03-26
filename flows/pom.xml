@@ -28,19 +28,25 @@
         <version>2.35.1</version>
     </parent>
 
-    <packaging>pom</packaging>
-    <artifactId>em2m-java-sdk-search-pom</artifactId>
-    <name>em2m-java-sdk-search-pom</name>
-
-    <modules>
-        <module>core</module>
-        <module>mongo</module>
-        <module>bean</module>
-        <module>es</module>
-        <module>scaleset</module>
-    </modules>
+    <packaging>jar</packaging>
+    <artifactId>em2m-java-sdk-flows</artifactId>
+    <name>em2m-java-sdk-flows</name>
 
     <dependencies>
+
+        <dependency>
+            <groupId>com.google.inject</groupId>
+            <artifactId>guice</artifactId>
+            <version>4.2.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>27.0.1-jre</version>
+        </dependency>
+
+
     </dependencies>
 
 </project>

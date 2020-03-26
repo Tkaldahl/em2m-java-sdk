@@ -10,7 +10,9 @@ open class BasicActionProcessor(private val flowResolver: ActionFlowResolver, pr
                 .filter { it.priority < Priorities.ERROR }
                 .plus(MainTransformer(flow))
                 .sortedBy { it.priority }
-        transformers.forEach { xform -> xform.doOnNext(context) }
+        transformers.forEach {
+            xform ->
+            xform.doOnNext(context) }
     }
 
     override fun handleError(context: ActionContext) {
