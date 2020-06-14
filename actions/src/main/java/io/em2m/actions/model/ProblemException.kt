@@ -17,8 +17,7 @@
  */
 package io.em2m.actions.model
 
-data class ProblemException(val problem: Problem) : Error(problem.title) {
-
+@Deprecated("Moved to problem sdk", replaceWith = ReplaceWith("io.em2m.problem.ProblemException"))
+data class ProblemException(val problem: Problem) : RuntimeException(problem.title) {
     constructor(throwable: Throwable) : this(Problem.convert(throwable))
-
 }

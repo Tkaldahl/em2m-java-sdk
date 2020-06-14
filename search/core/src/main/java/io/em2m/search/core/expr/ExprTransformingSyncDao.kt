@@ -2,11 +2,11 @@ package io.em2m.search.core.expr
 
 import io.em2m.search.core.daos.SyncDaoWrapper
 import io.em2m.search.core.model.*
-import io.em2m.search.core.xform.AggResultTransformer
 import io.em2m.search.core.xform.SourceFormatAggTransformer
 import io.em2m.simplex.Simplex
 import io.em2m.simplex.model.Expr
 
+@Deprecated("Use FieldTransformerDao instead")
 open class ExprTransformingSyncDao<T>(simplex: Simplex, delegate: SyncDao<T>) : SyncDaoWrapper<T>(delegate) {
 
     val parser = simplex.parser
@@ -21,7 +21,8 @@ open class ExprTransformingSyncDao<T>(simplex: Simplex, delegate: SyncDao<T>) : 
         }
         val exprFields = rowExprs.filterNotNull().flatMap { FieldKeyHandler.fields(it) }
         val delegateFields = exprFields.plus(rowNames).filterNotNull().map { Field(name = it) }
-        val req = request.copy(fields = delegateFields, aggs = transformAggs(request.aggs), sorts = transformSorts(request.sorts))
+        val query = request.query?.let { transformQuery(it) }
+        val req = request.copy(query = query, fields = delegateFields, aggs = transformAggs(request.aggs), sorts = transformSorts(request.sorts))
         return delegate.search(req).let { results ->
             val rows = transformRows(request, results.rows, delegateFields, rowExprs)
             val aggs = transformAggResults(request, results.aggs)
@@ -41,6 +42,10 @@ open class ExprTransformingSyncDao<T>(simplex: Simplex, delegate: SyncDao<T>) : 
                 listOf(sort)
             }
         }
+    }
+
+    private fun transformQuery(query: Query, timeZone: String? = null): Query {
+        return query.let { ExprQueryTransformer(parser).transform(it) }
     }
 
     private fun transformAggs(aggs: List<Agg>): List<Agg> {
@@ -67,7 +72,7 @@ open class ExprTransformingSyncDao<T>(simplex: Simplex, delegate: SyncDao<T>) : 
                     val expr = exprs[index]
                     val settings = it.value.settings
                     when {
-                        expr != null -> expr.call(exprContext.map.plus(settings))
+                        expr != null -> expr.call(exprContext.toMap().plus(settings))
                         name != null -> values[name]
                         else -> null
                     }
@@ -105,7 +110,7 @@ open class ExprTransformingSyncDao<T>(simplex: Simplex, delegate: SyncDao<T>) : 
                     override fun transformBucket(bucket: Bucket): Bucket {
                         val context = BucketContext(request, scope, bucket)
                         // temporarily move scope up a level until we have a better fix
-                        val label = expr.call(context.map.plus(scope)).toString()
+                        val label = expr.call(context.toMap().plus(scope)).toString()
                         return bucket.copy(label = label)
                     }
                 }

@@ -5,8 +5,8 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.em2m.actions.model.ActionContext
 import io.em2m.actions.model.ActionProcessor
 import io.em2m.actions.model.MultipartData
-import io.em2m.actions.model.Problem
 import io.em2m.policy.model.Claims
+import io.em2m.problem.Problem
 import java.io.InputStream
 import java.util.*
 import javax.servlet.http.HttpServletRequest
@@ -32,7 +32,7 @@ open class ServletRuntime(private val actionPrefix: String, private val processo
         context.scope["servletContext"] = request
         try {
             processor.process(context)
-        } catch (error: Error) {
+        } catch (error: Throwable) {
             handleError(response, context, error)
         }
     }

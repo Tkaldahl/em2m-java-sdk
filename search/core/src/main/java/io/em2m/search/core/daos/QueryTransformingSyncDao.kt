@@ -3,6 +3,7 @@ package io.em2m.search.core.daos
 import io.em2m.search.core.model.*
 import io.em2m.search.core.xform.*
 
+@Deprecated("Use TransformerDao instead")
 class QueryTransformingSyncDao<T>(
         private val aliases: Map<String, Field> = emptyMap(),
         private val fieldSets: Map<String, List<Field>> = emptyMap(),
@@ -49,7 +50,7 @@ class QueryTransformingSyncDao<T>(
     }
 
     private fun transformRequest(request: SearchRequest): SearchRequest {
-        val timeZone: String? = request.params.get("timeZone") as String?
+        val timeZone: String? = request.params["timeZone"] as String?
         val fields = request.fields
                 .plus(fieldSets[request.fieldSet] ?: emptyList())
                 .map {
@@ -79,8 +80,7 @@ class QueryTransformingSyncDao<T>(
         return request.aggs.mapNotNull { agg ->
             val aggResult = aggResults[agg.key]
             if (agg is NamedAgg) {
-                val named = namedAggs[agg.name]
-                when (named) {
+                when (val named = namedAggs[agg.name]) {
                     is Fielded -> aggResult?.copy(field = named.field)
                     is FiltersAgg -> aggResult?.copy(buckets = transformFilterBuckets(named, aggResult.buckets))
                     else -> aggResult

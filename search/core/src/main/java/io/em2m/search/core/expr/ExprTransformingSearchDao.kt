@@ -2,12 +2,12 @@ package io.em2m.search.core.expr
 
 import io.em2m.search.core.daos.SearchDaoWrapper
 import io.em2m.search.core.model.*
-import io.em2m.search.core.xform.AggResultTransformer
 import io.em2m.search.core.xform.SourceFormatAggTransformer
 import io.em2m.simplex.Simplex
 import io.em2m.simplex.model.Expr
 import rx.Observable
 
+@Deprecated("Use FieldTransformerDao instead")
 class ExprTransformingSearchDao<T>(simplex: Simplex, delegate: SearchDao<T>) : SearchDaoWrapper<T>(delegate) {
 
     val parser = simplex.parser
@@ -22,7 +22,8 @@ class ExprTransformingSearchDao<T>(simplex: Simplex, delegate: SearchDao<T>) : S
         }
         val exprFields = rowExprs.filterNotNull().flatMap { FieldKeyHandler.fields(it) }
         val delegateFields = exprFields.plus(rowNames).filterNotNull().map { Field(name = it) }
-        val req = request.copy(fields = delegateFields, aggs = transformAggs(request.aggs), sorts = transformSorts(request.sorts))
+        val query = request.query?.let { transformQuery(it) }
+        val req = request.copy(query = query, fields = delegateFields, aggs = transformAggs(request.aggs), sorts = transformSorts(request.sorts))
         return delegate.search(req).map { results ->
             val rows = transformRows(request, results.rows, delegateFields, rowExprs)
             val aggs = transformAggResults(request, results.aggs)
@@ -42,6 +43,10 @@ class ExprTransformingSearchDao<T>(simplex: Simplex, delegate: SearchDao<T>) : S
                 listOf(sort)
             }
         }
+    }
+
+    private fun transformQuery(query: Query, timeZone: String? = null): Query {
+        return query.let { ExprQueryTransformer(parser).transform(it) }
     }
 
     private fun transformAggs(aggs: List<Agg>): List<Agg> {
@@ -68,7 +73,7 @@ class ExprTransformingSearchDao<T>(simplex: Simplex, delegate: SearchDao<T>) : S
                     val expr = exprs[index]
                     val settings = it.value.settings
                     when {
-                        expr != null -> expr.call(exprContext.map.plus(settings))
+                        expr != null -> expr.call(exprContext.toMap().plus(settings))
                         name != null -> values[name]
                         else -> null
                     }
@@ -104,7 +109,7 @@ class ExprTransformingSearchDao<T>(simplex: Simplex, delegate: SearchDao<T>) : S
                     override fun transformBucket(bucket: Bucket): Bucket {
                         val context = BucketContext(request, scope, bucket)
                         // temporarily move scope up a level until we have a better fix
-                        val label = expr.call(context.map.plus(scope)).toString()
+                        val label = expr.call(context.toMap().plus(scope)).toString()
                         return bucket.copy(label = label)
                     }
                 }

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonAnySetter
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
 
+@Deprecated("Moved to problem sdk", replaceWith = ReplaceWith("io.em2m.problem.Problem"))
 @JsonInclude(JsonInclude.Include.NON_NULL)
 class Problem(val type: String? = null,
               val title: String,
