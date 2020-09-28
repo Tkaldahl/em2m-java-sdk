@@ -26,6 +26,7 @@ class Simplex(delegate: Simplex? = null) {
             .delegate(Dates.keys)
             .delegate(Bools.keys)
             .key(Key("repeat", "*"), PathKeyHandler(this, "repeat"))
+            .key(Key("var", "*"), PathKeyHandler(this, "variables"))
 
     private val pipes = BasicPipeTransformResolver()
             .delegate(Numbers.pipes)
@@ -121,7 +122,7 @@ class Simplex(delegate: Simplex? = null) {
 
     fun eval(expr: String, context: ExprContext): Any? {
         val parsed = cache.getOrPut(expr, { parser.parse(expr) })
-        // safey measure until we implement an extensible caching API
+        // safety measure until we implement an extensible caching API
         if (cache.size > 1000) {
             cache.clear()
         }

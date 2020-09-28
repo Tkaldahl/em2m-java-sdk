@@ -16,18 +16,21 @@ class EsSyncDao<T>(val esApi: EsApi, val index: String, val type: String, tClass
     val requestConverter = RequestConverter(objectMapper)
     val resultConverter = ResultConverter(this.docMapper)
 
+    private fun String.urlEncode() = java.net.URLEncoder.encode(this, "UTF-8")
+
     override fun create(entity: T): T? {
         val id = generateId()
-        idMapper.setId(entity, id)
-        val doc = encode(entity)
+        val transformedEntity = idMapper.setId(entity, id)
+        val doc = encode(transformedEntity)
         return if (doc != null) {
-            esApi.put(index, type, generateId(), doc)
+            esApi.put(index, type, idMapper.getId(transformedEntity).urlEncode(), doc)
             entity
         } else null
     }
 
     override fun deleteById(id: String): Boolean {
-        esApi.delete(index, type, id)
+        // TODO: DOES NOT SUPPORT ID MAPPER TRANSFORMED ENTITIES
+        esApi.delete(index, type, id.urlEncode())
         // TODO - Find any efficient way to determine if entity was deleted
         return true
     }
@@ -68,7 +71,7 @@ class EsSyncDao<T>(val esApi: EsApi, val index: String, val type: String, tClass
         idMapper.setId(entity, id)
         val doc = docMapper.toDoc(entity)
         return if (doc != null) {
-            esApi.put(index, type, id, doc)
+            esApi.put(index, type, idMapper.getId(entity).urlEncode(), doc)
             entity
         } else null
     }
@@ -92,7 +95,7 @@ class EsSyncDao<T>(val esApi: EsApi, val index: String, val type: String, tClass
         }
     }
 
-    internal fun encode(obj: T): JsonNode? {
+    private fun encode(obj: T): JsonNode? {
         return docMapper.toDoc(obj)
     }
 
@@ -162,6 +165,4 @@ class EsSyncDao<T>(val esApi: EsApi, val index: String, val type: String, tClass
             }
         }
     }
-
-
 }
