@@ -9,6 +9,7 @@ import org.junit.Test
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 
@@ -58,6 +59,13 @@ class DateTest {
     }
 
     @Test
+    fun testFormatDurationZero() {
+        val pipe = FormatDurationPipe()
+        val result = pipe.transform(0, emptyMap())
+        assertEquals("0 seconds", result)
+    }
+
+    @Test
     fun testFormatDateWithColon() {
         val exprString = "\${ns:dateKey | formatDate:yyyy-MM-dd HH\\:mm:America/Los_Angeles}"
         val expr = requireNotNull(simplex.parser.parse(exprString))
@@ -93,13 +101,57 @@ class DateTest {
     }
 
     @Test
+    fun testFromNowUnits() {
+        val dayExpr = requireNotNull(simplex.parser.parse("\${ns:dateKey | fromNowUnits:d}"))
+        val dayResult = dayExpr.call(emptyMap())
+        assertNotNull(dayResult)
+
+        val minuteExpr = requireNotNull(simplex.parser.parse("\${ns:dateKey | fromNowUnits:m}"))
+        val minuteResult = minuteExpr.call(emptyMap())
+        assertNotNull(minuteResult)
+    }
+
+    @Test
     fun testDateMath() {
-        val expected = "2015-05-21"
-        val exprString = "\${ns:dateKey | dateMath:now+30d/d}"
+        val expected = "2015-04-21 22:00"
+        val exprString = "\${ns:dateKey | dateMath:now+1d/d:America/Chicago}"
         val expr = requireNotNull(simplex.parser.parse(exprString))
         val result = expr.call(emptyMap())
-        val actual = SimpleDateFormat("yyyy-MM-dd").format(result)
+        val actual = SimpleDateFormat("yyyy-MM-dd HH:mm").format(result)
         assertEquals(expected, actual)
+    }
+
+    @Test
+    fun testDateMathVariableZone() {
+        val expected = "2015-04-21 22:00"
+        val exprString = "\${ns:dateKey | dateMath:now+1d/d:\$timeZone }"
+        val expr = requireNotNull(simplex.parser.parse(exprString))
+        val result = expr.call(mapOf("timeZone" to "America/Chicago"))
+        val actual = SimpleDateFormat("yyyy-MM-dd HH:mm").format(result)
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun testDatePlus() {
+        val expected = "2015-04-22 17:31"
+        val exprString = "\${ns:dateKey | datePlus:1:d}"
+        val expr = requireNotNull(simplex.parser.parse(exprString))
+        val result = expr.call(emptyMap())
+        val actual = SimpleDateFormat("yyyy-MM-dd HH:mm").format(result)
+        assertEquals(expected, actual)
+
+        val exprString2 = "\${ns:dateKey | datePlus:\$offset:d}"
+        val expr2 = requireNotNull(simplex.parser.parse(exprString))
+        val result2 = expr.call(mapOf("offset" to 1))
+        val actual2 = SimpleDateFormat("yyyy-MM-dd HH:mm").format(result2)
+        assertEquals(expected, actual2)
+
+        val expected3 = "2015-04-22 17:31"
+        val exprString3 = "\${ns:dateKey | datePlus:1:d:\$timeZone}"
+        val expr3 = requireNotNull(simplex.parser.parse(exprString3))
+        val result3 = expr3.call(mapOf("timeZone" to "America/Chicago"))
+        val actual3 = SimpleDateFormat("yyyy-MM-dd HH:mm").format(result3)
+        assertEquals(expected3, actual3)
     }
 
 }
