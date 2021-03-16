@@ -1,6 +1,9 @@
 package io.em2m.simplex.std
 
+import com.fasterxml.jackson.databind.node.ArrayNode
+import io.em2m.simplex.evalPath
 import io.em2m.simplex.model.*
+import io.em2m.utils.coerce
 
 class NotNullPipe : PipeTransform {
 
@@ -8,6 +11,7 @@ class NotNullPipe : PipeTransform {
         return when (value) {
             is List<*> -> value.filterNotNull()
             is Array<*> -> value.filterNotNull()
+            is ArrayNode -> value.firstOrNull()
             else -> value
         }
     }
@@ -19,6 +23,7 @@ class ReversedPipe : PipeTransform {
         return when (value) {
             is List<*> -> value.reversed()
             is Array<*> -> value.reversed()
+            is ArrayNode -> value.firstOrNull()
             else -> value
         }
     }
@@ -29,6 +34,7 @@ class FilterNotNullPipe : PipeTransform {
         return when (value) {
             is List<*> -> value.filterNotNull()
             is Array<*> -> value.filterNotNull()
+            is ArrayNode -> value.firstOrNull()
             else -> value
         }
     }
@@ -39,6 +45,7 @@ class FilterNotBlankPipe : PipeTransform {
         return when (value) {
             is List<*> -> value.filterNot { it?.toString().isNullOrBlank() }
             is Array<*> -> value.filterNot { it?.toString().isNullOrBlank() }
+            is ArrayNode -> value.firstOrNull()
             else -> value
         }
     }
@@ -49,6 +56,7 @@ class FirstPipe : PipeTransform {
         return when (value) {
             is List<*> -> value.firstOrNull()
             is Array<*> -> value.firstOrNull()
+            is ArrayNode -> value.firstOrNull()
             else -> value
         }
     }
@@ -59,6 +67,7 @@ class FirstNotBlankPipe : PipeTransform {
         return when (value) {
             is List<*> -> value.find { !it?.toString().isNullOrBlank() }
             is Array<*> -> value.find { !it?.toString().isNullOrBlank() }
+            is ArrayNode -> value.firstOrNull()
             else -> value
         }
     }
@@ -69,6 +78,7 @@ class LastPipe : PipeTransform {
         return when (value) {
             is List<*> -> value.lastOrNull()
             is Array<*> -> value.lastOrNull()
+            is ArrayNode -> value.firstOrNull()
             else -> value
         }
     }
@@ -79,6 +89,7 @@ class LastNotBlankPipe : PipeTransform {
         return when (value) {
             is List<*> -> value.findLast { !it?.toString().isNullOrBlank() }
             is Array<*> -> value.findLast { !it?.toString().isNullOrBlank() }
+            is ArrayNode -> value.firstOrNull()
             else -> value
         }
     }
@@ -89,6 +100,7 @@ class SizePipe : PipeTransform {
         return when (value) {
             is List<*> -> value.size
             is Array<*> -> value.size
+            is ArrayNode -> value.size()
             is String -> value.length
             else -> null
         }
@@ -127,10 +139,38 @@ class SlicePipe : PipeTransform {
         return when (value) {
             is List<*> -> value.slice(range)
             is Array<*> -> value.slice(range)
+            is ArrayNode -> value.firstOrNull()
             is String -> value.slice(range)
             else -> null
         }
     }
+}
+
+class AssociateByPipe() : PipeTransform {
+
+    private var path: String? = null
+
+    override fun args(args: List<String>) {
+        if (args.isNotEmpty()) {
+            path = args[0].trim()
+        }
+    }
+
+    override fun transform(value: Any?, context: ExprContext): Any? {
+        return when {
+            path.isNullOrEmpty() -> null
+            (value is List<*>) -> transformList(value)
+            (value is Array<*>) -> transformList(value)
+            (value is ArrayNode) -> transformList(value)
+            else -> mapOf(value.evalPath(path!!) to value)
+        }
+    }
+
+    private fun transformList(values: Any?): Any {
+        val items: List<Any?> = values.coerce() ?: emptyList()
+        return items.associateBy { it.evalPath(path!!) }
+    }
+
 }
 
 
@@ -149,7 +189,8 @@ object Arrays {
             "last" to LastPipe(),
             "lastNotBlank" to LastNotBlankPipe(),
             "size" to SizePipe(),
-            "slice" to SlicePipe()
+            "slice" to SlicePipe(),
         )
     )
+        .transform("associateBy") { AssociateByPipe() }
 }

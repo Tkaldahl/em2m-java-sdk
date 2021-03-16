@@ -1,5 +1,6 @@
 package io.em2m.simplex.std
 
+import com.fasterxml.jackson.databind.node.ArrayNode
 import io.em2m.simplex.model.*
 import io.em2m.utils.coerce
 import java.net.URLDecoder
@@ -10,8 +11,9 @@ import java.util.regex.Matcher
 class UpperCasePipe : PipeTransform {
     override fun transform(value: Any?, context: ExprContext): Any? {
         return when (value) {
-            is Iterable<*> -> value.map { it?.toString()?.toUpperCase() }
+            is List<*> -> value.map { it?.toString()?.toUpperCase() }
             is Array<*> -> value.map { it?.toString()?.toUpperCase() }
+            is ArrayNode -> value.map { it?.toString()?.toUpperCase() }
             else -> value?.toString()?.toUpperCase()
         }
     }
@@ -39,6 +41,59 @@ class TrimPipe : PipeTransform {
         } else {
             value?.toString()?.trim()
         }
+    }
+}
+
+class FormatPhonePipe : PipeTransform {
+
+    override fun transform(value: Any?, context: ExprContext): Any? {
+        return if (value is Iterable<*>) {
+            value.map { phoneFormat(it) }
+        } else if (value is Array<*>) {
+            value.map { phoneFormat(it) }
+        } else {
+            phoneFormat(value)
+        }
+    }
+
+    fun phoneFormat(value: Any?): Any? {
+        val phoneNumber = value?.toString()?.trim() ?: return null
+        if (phoneNumber.length == 10) {
+            return "(" + phoneNumber.substring(0,3) + ") " + phoneNumber.substring(3,6) + "-" + phoneNumber.substring(6,10)
+        } else {
+            return phoneNumber
+        }
+    }
+}
+
+class RemoveCharsPipe : PipeTransform {
+
+    var chars = ""
+
+
+    override fun transform(value: Any?, context: ExprContext): Any? {
+        return if (value is Iterable<*>) {
+            value.map { removeChar(it) }
+        } else if (value is Array<*>) {
+            value.map { removeChar(it) }
+        } else {
+            removeChar(value)
+        }
+    }
+
+    override fun args(args: List<String>) {
+        if (args.isNotEmpty()) {
+            chars = args[0]
+        }
+    }
+
+    fun removeChar(value: Any?): Any? {
+        var phoneNumber = value?.toString()
+
+        for (c in chars) {
+            phoneNumber = phoneNumber?.replace(c.toString(), "")
+        }
+        return phoneNumber
     }
 }
 
@@ -294,6 +349,8 @@ object Strings {
             .transform("split") { Split() }
             .transform("urlEncode", UrlEncodePipe())
             .transform("urlDecode", UrlDecodePipe())
+            .transform("formatPhone", FormatPhonePipe())
+            .transform("removeChars", RemoveCharsPipe())
     val keys = BasicKeyResolver()
     val conditions = BasicConditionResolver(StandardStringConditions)
 
